@@ -1,5 +1,7 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
+using System.Runtime.Loader;
 using Microsoft.Build.Locator;
 using Microsoft.Extensions.Logging;
 
@@ -14,14 +16,33 @@ namespace MSBuildWorkspaceTester.Services
 
         public void Initialize()
         {
-            var instances = GetVisualStudioInstances();
-            if (instances.Length == 0)
-            {
-                return;
-            }
+            var buildPath = @"C:\Program Files (x86)\dotnet\sdk\5.0.100-preview.7.20366.6";
+            MSBuildLocator.RegisterMSBuildPath(buildPath);
 
-            var instance = instances[0];
-            RegisterVisualStudioInstance(instance);
+            // THis helps with a list NuGet package that are not found easily
+            // See https://github.com/microsoft/MSBuildLocator/issues/86 and https://github.com/microsoft/MSBuildLocator/pull/93
+            AssemblyLoadContext.Default.Resolving += (assemblyLoadContext, assemblyName) =>
+            {
+                var path = Path.Combine(buildPath, assemblyName.Name + ".dll");
+                if (File.Exists(path))
+                {
+                    return assemblyLoadContext.LoadFromAssemblyPath(path);
+                }
+
+                return null;
+            };
+
+            return;
+
+            //var instances = GetVisualStudioInstances();
+            //if (instances.Length == 0)
+            //{
+            //    return;
+            //}
+
+            ////var instance = instances[0];
+            //var instance = instances.Last();
+            //RegisterVisualStudioInstance(instance);
         }
 
         private VisualStudioInstance[] GetVisualStudioInstances()
